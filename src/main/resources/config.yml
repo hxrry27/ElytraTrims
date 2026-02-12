@@ -1,0 +1,33 @@
+# ElytraTrims Configuration
+
+# feature toggles - disable any feature entirely
+features:
+  trims: true
+  dyeing: true
+  banner-patterns: true
+  cauldron-washing: true
+
+# Permission-gated effects
+# These require specific permissions to apply (see plugin.yml)
+# Ingredients can be overridden here if desired
+gated-effects:
+  glow:
+    enabled: true
+    permission: "elytratrims.effect.glow"
+    ingredient: GLOW_INK_SAC
+  cosmic:
+    enabled: true
+    permission: "elytratrims.effect.cosmic"
+    ingredient: NETHER_STAR
+  animation:
+    enabled: true
+    permission: "elytratrims.effect.animation"
+    ingredient: ENCHANTED_GOLDEN_APPLE
+
+# messages
+messages:
+  no-permission: "<red>You don't have permission to apply this effect."
+  effect-applied: "<green>Effect applied to your elytra!"
+  effect-removed: "<green>Effect removed from your elytra."
+  not-elytra: "<red>You must be holding an elytra."
+  reload: "<green>ElytraTrims config reloaded."

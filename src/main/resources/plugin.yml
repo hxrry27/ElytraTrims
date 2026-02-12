@@ -1,0 +1,39 @@
+name: ElytraTrims
+version: '${version}'
+main: dev.hxrry.elytratrims.ElytraTrims
+api-version: '1.21'
+description: Server-side companion plugin for the Elytra Trims Fabric mod
+author: hxrry
+depend: [NBTAPI]
+
+commands:
+  elytratrims:
+    description: ElytraTrims admin commands
+    permission: elytratrims.admin
+    aliases: [et]
+
+permissions:
+  elytratrims.craft.trim:
+    description: Apply trims to elytras via smithing table
+    default: true
+  elytratrims.craft.dye:
+    description: Dye elytras in crafting table
+    default: true
+  elytratrims.craft.pattern:
+    description: Apply banner patterns to elytras
+    default: true
+  elytratrims.effect.glow:
+    description: Apply glow effect to elytras
+    default: false
+  elytratrims.effect.cosmic:
+    description: Apply cosmic/gateway effect to elytras
+    default: false
+  elytratrims.effect.animation:
+    description: Apply animation effect to elytras
+    default: false
+  elytratrims.cauldron:
+    description: Wash elytras in cauldron to remove effects
+    default: true
+  elytratrims.admin:
+    description: Admin commands for ElytraTrims
+    default: op
