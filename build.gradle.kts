@@ -6,7 +6,7 @@ group = "dev.hxrry"
 version = "1.0.0"
 
 java {
-    toolchain.languageVersion.set(JavaLanguageVersion.of(21))
+    toolchain.languageVersion.set(JavaLanguageVersion.of(25))
 }
 
 repositories {
@@ -16,8 +16,8 @@ repositories {
 }
 
 dependencies {
-    compileOnly("io.papermc.paper:paper-api:1.21.11-R0.1-SNAPSHOT")
-    compileOnly("de.tr7zw:item-nbt-api-plugin:2.14.1")
+    compileOnly("io.papermc.paper:paper-api:26.1.2.build.+")
+    compileOnly("de.tr7zw:item-nbt-api-plugin:2.15.6")
 }
 
 tasks {

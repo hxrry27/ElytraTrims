@@ -17,12 +17,11 @@ public final class ElytraTrims extends JavaPlugin {
 
     private Settings settings;
 
-    @SuppressWarnings("removal")
     @Override
     public void onEnable() {
         if (!NBT.preloadApi()) {
             getLogger().warning("NBT-API wasn't initialized properly, disabling the plugin");
-            getPluginLoader().disablePlugin(this);
+            getServer().getPluginManager().disablePlugin(this);
             return;
         }
 
