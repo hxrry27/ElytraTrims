@@ -3,14 +3,14 @@ version: '${version}'
 main: dev.hxrry.elytratrims.ElytraTrims
 api-version: '26.1'
 description: Server-side companion plugin for the Elytra Trims Fabric mod
-author: hxrry
-depend: [NBTAPI]
+authors: [hxrry]
 
-commands:
-  elytratrims:
-    description: ElytraTrims admin commands
-    permission: elytratrims.admin
-    aliases: [et]
+dependencies:
+  server:
+    NBTAPI:
+      load: BEFORE
+      required: true
+      join-classpath: true
 
 permissions:
   elytratrims.craft.trim:

@@ -8,10 +8,14 @@ import dev.hxrry.elytratrims.listeners.SmithingListener;
 import de.tr7zw.nbtapi.NBT;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
+import org.bukkit.command.Command;
+import org.bukkit.command.CommandSender;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.RecipeChoice;
 import org.bukkit.inventory.SmithingTransformRecipe;
 import org.bukkit.plugin.java.JavaPlugin;
+
+import java.util.List;
 
 public final class ElytraTrims extends JavaPlugin {
 
@@ -40,7 +44,7 @@ public final class ElytraTrims extends JavaPlugin {
 
         registerRecipes();
 
-        getCommand("elytratrims").setExecutor(new ElytraTrimsCommand(this));
+        registerCommand();
 
         getLogger().info("ElytraTrims enabled.");
     }
@@ -172,5 +176,23 @@ public final class ElytraTrims extends JavaPlugin {
     public void reload() {
         reloadConfig();
         settings = new Settings(this);
+    }
+
+    private void registerCommand() {
+        ElytraTrimsCommand handler = new ElytraTrimsCommand(this);
+        Command command = new Command("elytratrims", "ElytraTrims admin commands", "/elytratrims", List.of("et")) {
+            @Override
+            public boolean execute(CommandSender sender, String label, String[] args) {
+                return handler.onCommand(sender, this, label, args);
+            }
+
+            @Override
+            public List<String> tabComplete(CommandSender sender, String alias, String[] args) {
+                List<String> result = handler.onTabComplete(sender, this, alias, args);
+                return result == null ? List.of() : result;
+            }
+        };
+        command.setPermission("elytratrims.admin");
+        getServer().getCommandMap().register("elytratrims", command);
     }
 }
