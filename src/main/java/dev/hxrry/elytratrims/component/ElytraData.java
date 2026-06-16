@@ -2,6 +2,8 @@ package dev.hxrry.elytratrims.component;
 
 import dev.hxrry.elytratrims.config.Settings;
 import de.tr7zw.nbtapi.NBT;
+import de.tr7zw.nbtapi.iface.ReadWriteNBT;
+import de.tr7zw.nbtapi.iface.ReadableNBT;
 import io.papermc.paper.datacomponent.DataComponentTypes;
 import io.papermc.paper.datacomponent.item.BannerPatternLayers;
 import io.papermc.paper.datacomponent.item.DyedItemColor;
@@ -87,37 +89,46 @@ public final class ElytraData {
         };
     }
 
+    private static final String CUSTOM_DATA = "minecraft:custom_data";
+
     public static boolean hasEffect(ItemStack elytra, Settings.Effect effect) {
         String key = getKeyForEffect(effect);
-        return NBT.get(elytra, nbt -> nbt.hasTag(key) && nbt.getByte(key) == 1);
+        return NBT.getComponents(elytra, comps -> {
+            ReadableNBT customData = comps.getCompound(CUSTOM_DATA);
+            return customData != null && customData.hasTag(key) && customData.getByte(key) == 1;
+        });
     }
 
     public static void setEffect(ItemStack elytra, Settings.Effect effect, boolean value) {
         String key = getKeyForEffect(effect);
-        NBT.modify(elytra, nbt -> {
+        NBT.modifyComponents(elytra, comps -> {
             if (value) {
-                nbt.setByte(key, (byte) 1);
-            } else {
-                nbt.removeKey(key);
+                comps.getOrCreateCompound(CUSTOM_DATA).setByte(key, (byte) 1);
+            } else if (comps.hasTag(CUSTOM_DATA)) {
+                comps.getOrCreateCompound(CUSTOM_DATA).removeKey(key);
             }
         });
     }
 
     public static boolean hasAnyEffect(ItemStack elytra) {
-        return NBT.get(elytra, nbt -> {
+        return NBT.getComponents(elytra, comps -> {
+            ReadableNBT customData = comps.getCompound(CUSTOM_DATA);
+            if (customData == null) return false;
             for (Settings.Effect effect : Settings.Effect.values()) {
                 String key = getKeyForEffect(effect);
-                if (nbt.hasTag(key) && nbt.getByte(key) == 1) return true;
+                if (customData.hasTag(key) && customData.getByte(key) == 1) return true;
             }
             return false;
         });
     }
 
     public static void removeAllEffects(ItemStack elytra) {
-        NBT.modify(elytra, nbt -> {
-            nbt.removeKey(KEY_GLOW);
-            nbt.removeKey(KEY_GATEWAY);
-            nbt.removeKey(KEY_ANIMATION);
+        NBT.modifyComponents(elytra, comps -> {
+            if (!comps.hasTag(CUSTOM_DATA)) return;
+            ReadWriteNBT customData = comps.getOrCreateCompound(CUSTOM_DATA);
+            customData.removeKey(KEY_GLOW);
+            customData.removeKey(KEY_GATEWAY);
+            customData.removeKey(KEY_ANIMATION);
         });
     }
 
