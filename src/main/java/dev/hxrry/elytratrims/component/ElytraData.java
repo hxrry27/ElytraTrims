@@ -17,6 +17,7 @@ public final class ElytraData {
     private static final String KEY_GLOW = "elytratrims:glow";
     private static final String KEY_GATEWAY = "elytratrims:gateway";
     private static final String KEY_ANIMATION = "elytratrims:animation";
+    private static final String KEY_BANNER = "elytratrims:banner";
 
     private ElytraData() {}
 
@@ -129,6 +130,17 @@ public final class ElytraData {
             customData.removeKey(KEY_GLOW);
             customData.removeKey(KEY_GATEWAY);
             customData.removeKey(KEY_ANIMATION);
+            customData.removeKey(KEY_BANNER);
+        });
+    }
+
+    public static void setBannerFlag(ItemStack elytra, boolean value) {
+        NBT.modifyComponents(elytra, comps -> {
+            if (value) {
+                comps.getOrCreateCompound(CUSTOM_DATA).setByte(KEY_BANNER, (byte) 1);
+            } else if (comps.hasTag(CUSTOM_DATA)) {
+                comps.getOrCreateCompound(CUSTOM_DATA).removeKey(KEY_BANNER);
+            }
         });
     }
 

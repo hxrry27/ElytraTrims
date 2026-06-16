@@ -179,8 +179,8 @@ public class SmithingListener implements Listener {
             case SPECIFIC_TRIM -> applySpecificTrim(result, template, addition);
             case RANDOM_TRIM -> applyRandomTrim(result, addition, true);
             case RANDOM_TRIM_REROLL -> applyRandomTrim(result, addition, false);
-            case BANNER_PATTERN -> applyBannerPatterns(result, template);
-            case SHIELD_PATTERN -> applyBannerPatterns(result, template);
+            case BANNER_PATTERN -> applyBannerPatterns(result, template, true);
+            case SHIELD_PATTERN -> applyBannerPatterns(result, template, false);
             case GATED_EFFECT -> ElytraData.setEffect(result, match.effect(), true);
             default -> { return null; }
         }
@@ -229,12 +229,14 @@ public class SmithingListener implements Listener {
         ElytraData.setTrim(elytra, ItemArmorTrim.itemArmorTrim(trim).build());
     }
 
-    private void applyBannerPatterns(ItemStack elytra, ItemStack banner) {
+    private void applyBannerPatterns(ItemStack elytra, ItemStack banner, boolean bannerStyle) {
         if (banner == null) return;
 
         BannerPatternLayers patterns = banner.getData(DataComponentTypes.BANNER_PATTERNS);
         if (patterns != null) {
             ElytraData.setBannerPatterns(elytra, patterns);
+            // banner (paper) -> entity/wings/banner textures; shield (leather) -> entity/wings/shield
+            ElytraData.setBannerFlag(elytra, bannerStyle);
         }
     }
 
