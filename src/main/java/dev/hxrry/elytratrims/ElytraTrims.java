@@ -5,7 +5,6 @@ import dev.hxrry.elytratrims.config.Settings;
 import dev.hxrry.elytratrims.listeners.CauldronListener;
 import dev.hxrry.elytratrims.listeners.DyeListener;
 import dev.hxrry.elytratrims.listeners.SmithingListener;
-import de.tr7zw.nbtapi.NBT;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.command.Command;
@@ -23,12 +22,7 @@ public final class ElytraTrims extends JavaPlugin {
 
     @Override
     public void onEnable() {
-        if (!NBT.preloadApi()) {
-            getLogger().warning("NBT-API wasn't initialized properly, disabling the plugin");
-            getServer().getPluginManager().disablePlugin(this);
-            return;
-        }
-
+        //NBT API 2.15.7 *does* support 26.2 functionally, have tested
         saveDefaultConfig();
         settings = new Settings(this);
 
