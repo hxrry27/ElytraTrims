@@ -7,6 +7,7 @@ import dev.hxrry.elytratrims.listeners.DyeListener;
 import dev.hxrry.elytratrims.listeners.SmithingListener;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
+import org.bukkit.Tag;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.inventory.ItemStack;
@@ -19,6 +20,7 @@ import java.util.List;
 public final class ElytraTrims extends JavaPlugin {
 
     private Settings settings;
+    private boolean datapackActive;
 
     @Override
     public void onEnable() {
@@ -26,7 +28,11 @@ public final class ElytraTrims extends JavaPlugin {
         saveDefaultConfig();
         settings = new Settings(this);
 
-        if (settings.isTrimsEnabled() || settings.hasAnyGatedEffect()) {
+        // the datapack decides whether trims and dyeing work at all
+        checkDatapack();
+
+        // SmithingListener owns every recipe below, so it has to cover all of them
+        if (settings.isTrimsEnabled() || settings.isBannerPatternsEnabled() || settings.hasAnyGatedEffect()) {
             getServer().getPluginManager().registerEvents(new SmithingListener(this), this);
         }
         if (settings.isDyeingEnabled()) {
@@ -51,6 +57,22 @@ public final class ElytraTrims extends JavaPlugin {
         getLogger().info("ElytraTrims disabled.");
     }
 
+    // datapack shenanigans
+    private void checkDatapack() {
+        datapackActive = Tag.ITEMS_TRIMMABLE_ARMOR.isTagged(Material.ELYTRA);
+        if (!datapackActive) {
+            getLogger().warning("The ElytraTrims datapack is not loaded, so elytra trims and dyeing "
+                    + "will not work. If it was turned off, re-enable it with: "
+                    + "/datapack enable \"file/elytratrims\"");
+        }
+    }
+
+    public boolean isDatapackActive() {
+        return datapackActive;
+    }
+
+    // recipe shenanigans
+
     private final java.util.List<NamespacedKey> registeredRecipes = new java.util.ArrayList<>();
 
     private void registerRecipes() {
@@ -60,87 +82,42 @@ public final class ElytraTrims extends JavaPlugin {
         Settings settings = this.settings;
 
         if (settings.isTrimsEnabled()) {
-            java.util.List<Material> trimTemplates = new java.util.ArrayList<>();
-            for (Material mat : Material.values()) {
-                if (mat.isItem() && mat.name().endsWith("_ARMOR_TRIM_SMITHING_TEMPLATE")) {
-                    trimTemplates.add(mat);
-                }
-            }
+            RecipeChoice trimMaterials = new RecipeChoice.MaterialChoice(Tag.ITEMS_TRIM_MATERIALS);
 
-            if (!trimTemplates.isEmpty()) {
-                NamespacedKey key = new NamespacedKey(this, "elytra_specific_trim");
-                SmithingTransformRecipe recipe = new SmithingTransformRecipe(
-                        key, placeholder,
-                        new RecipeChoice.MaterialChoice(trimTemplates),
-                        elytraChoice,
-                        new RecipeChoice.MaterialChoice(
-                                Material.IRON_INGOT, Material.COPPER_INGOT, Material.GOLD_INGOT,
-                                Material.LAPIS_LAZULI, Material.EMERALD, Material.DIAMOND,
-                                Material.NETHERITE_INGOT, Material.REDSTONE, Material.AMETHYST_SHARD,
-                                Material.QUARTZ, Material.RESIN_BRICK
-                        )
-                );
-                getServer().addRecipe(recipe);
-                registeredRecipes.add(key);
-            }
-        }
-
-        if (settings.isTrimsEnabled()) {
             NamespacedKey key = new NamespacedKey(this, "elytra_random_trim");
-            SmithingTransformRecipe recipe = new SmithingTransformRecipe(
+            getServer().addRecipe(new SmithingTransformRecipe(
                     key, placeholder,
                     new RecipeChoice.MaterialChoice(Material.TRIAL_KEY),
                     elytraChoice,
-                    new RecipeChoice.MaterialChoice(
-                            Material.IRON_INGOT, Material.COPPER_INGOT, Material.GOLD_INGOT,
-                            Material.LAPIS_LAZULI, Material.EMERALD, Material.DIAMOND,
-                            Material.NETHERITE_INGOT, Material.REDSTONE, Material.AMETHYST_SHARD,
-                            Material.QUARTZ, Material.RESIN_BRICK
-                    )
-            );
-            getServer().addRecipe(recipe);
+                    trimMaterials
+            ));
             registeredRecipes.add(key);
 
             NamespacedKey rerollKey = new NamespacedKey(this, "elytra_random_trim_reroll");
-            SmithingTransformRecipe rerollRecipe = new SmithingTransformRecipe(
+            getServer().addRecipe(new SmithingTransformRecipe(
                     rerollKey, placeholder,
                     new RecipeChoice.MaterialChoice(Material.OMINOUS_TRIAL_KEY),
                     elytraChoice,
-                    new RecipeChoice.MaterialChoice(
-                            Material.IRON_INGOT, Material.COPPER_INGOT, Material.GOLD_INGOT,
-                            Material.LAPIS_LAZULI, Material.EMERALD, Material.DIAMOND,
-                            Material.NETHERITE_INGOT, Material.REDSTONE, Material.AMETHYST_SHARD,
-                            Material.QUARTZ, Material.RESIN_BRICK
-                    )
-            );
-            getServer().addRecipe(rerollRecipe);
+                    trimMaterials
+            ));
             registeredRecipes.add(rerollKey);
         }
 
         if (settings.isBannerPatternsEnabled()) {
-            RecipeChoice bannerChoice = new RecipeChoice.MaterialChoice(
-                    Material.WHITE_BANNER, Material.ORANGE_BANNER, Material.MAGENTA_BANNER,
-                    Material.LIGHT_BLUE_BANNER, Material.YELLOW_BANNER, Material.LIME_BANNER,
-                    Material.PINK_BANNER, Material.GRAY_BANNER, Material.LIGHT_GRAY_BANNER,
-                    Material.CYAN_BANNER, Material.PURPLE_BANNER, Material.BLUE_BANNER,
-                    Material.BROWN_BANNER, Material.GREEN_BANNER, Material.RED_BANNER,
-                    Material.BLACK_BANNER
-            );
+            RecipeChoice bannerChoice = new RecipeChoice.MaterialChoice(Tag.BANNERS);
 
             NamespacedKey bannerKey = new NamespacedKey(this, "elytra_banner_pattern");
-            SmithingTransformRecipe bannerRecipe = new SmithingTransformRecipe(
+            getServer().addRecipe(new SmithingTransformRecipe(
                     bannerKey, placeholder, bannerChoice, elytraChoice,
                     new RecipeChoice.MaterialChoice(Material.PAPER)
-            );
-            getServer().addRecipe(bannerRecipe);
+            ));
             registeredRecipes.add(bannerKey);
 
             NamespacedKey shieldKey = new NamespacedKey(this, "elytra_shield_pattern");
-            SmithingTransformRecipe shieldRecipe = new SmithingTransformRecipe(
+            getServer().addRecipe(new SmithingTransformRecipe(
                     shieldKey, placeholder, bannerChoice, elytraChoice,
                     new RecipeChoice.MaterialChoice(Material.LEATHER)
-            );
-            getServer().addRecipe(shieldRecipe);
+            ));
             registeredRecipes.add(shieldKey);
         }
 
@@ -150,13 +127,12 @@ public final class ElytraTrims extends JavaPlugin {
             if (config == null) continue;
 
             NamespacedKey key = new NamespacedKey(this, "elytra_effect_" + effect.getConfigKey());
-            SmithingTransformRecipe recipe = new SmithingTransformRecipe(
+            getServer().addRecipe(new SmithingTransformRecipe(
                     key, placeholder,
                     RecipeChoice.empty(),
                     elytraChoice,
                     new RecipeChoice.MaterialChoice(config.ingredient())
-            );
-            getServer().addRecipe(recipe);
+            ));
             registeredRecipes.add(key);
         }
 
@@ -167,9 +143,29 @@ public final class ElytraTrims extends JavaPlugin {
         return settings;
     }
 
-    public void reload() {
+    public boolean reload() {
+        Settings previous = settings;
         reloadConfig();
         settings = new Settings(this);
+
+        return previous.isTrimsEnabled() != settings.isTrimsEnabled()
+                || previous.isDyeingEnabled() != settings.isDyeingEnabled()
+                || previous.isBannerPatternsEnabled() != settings.isBannerPatternsEnabled()
+                || previous.isCauldronWashingEnabled() != settings.isCauldronWashingEnabled()
+                || effectsChanged(previous, settings);
+    }
+
+    private boolean effectsChanged(Settings previous, Settings current) {
+        for (Settings.Effect effect : Settings.Effect.values()) {
+            Settings.EffectConfig before = previous.getEffectConfig(effect);
+            Settings.EffectConfig after = current.getEffectConfig(effect);
+            if (before == null || after == null) {
+                if (before != after) return true;
+                continue;
+            }
+            if (before.enabled() != after.enabled() || before.ingredient() != after.ingredient()) return true;
+        }
+        return false;
     }
 
     private void registerCommand() {

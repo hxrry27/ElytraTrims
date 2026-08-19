@@ -18,17 +18,21 @@ public class ElytraTrimsCommand implements CommandExecutor, TabCompleter {
     private final ElytraTrims plugin;
 
     private static final List<String> SUBCOMMANDS = List.of("reload", "apply", "remove", "clear");
-    private static final List<String> EFFECT_NAMES = List.of("glow", "cosmic", "animation");
+
+    private static List<String> effectNames() {
+        List<String> names = new ArrayList<>();
+        for (Settings.Effect effect : Settings.Effect.values()) names.add(effect.getConfigKey());
+        return names;
+    }
 
     public ElytraTrimsCommand(ElytraTrims plugin) {
         this.plugin = plugin;
     }
 
-    @SuppressWarnings("deprecation")
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (args.length == 0) {
-            sender.sendMessage("§eElytraTrims §7v" + plugin.getDescription().getVersion());
+            sender.sendMessage("§eElytraTrims §7v" + plugin.getPluginMeta().getVersion());
             sender.sendMessage("§7Usage: /" + label + " <reload|apply|remove|clear>");
             return true;
         }
@@ -45,8 +49,14 @@ public class ElytraTrimsCommand implements CommandExecutor, TabCompleter {
     }
 
     private void handleReload(CommandSender sender) {
-        plugin.reload();
+        boolean restartNeeded = plugin.reload();
         sender.sendMessage(plugin.getSettings().getReloadMessage());
+
+        // recipes and listeners are wired at startup, so say so rather than let the toggle look applied
+        if (restartNeeded) {
+            sender.sendMessage("§eFeature toggles or effect ingredients changed. "
+                    + "Restart the server for those to take effect — messages reloaded either way.");
+        }
     }
 
     private void handleApply(CommandSender sender, String[] args) {
@@ -55,13 +65,17 @@ public class ElytraTrimsCommand implements CommandExecutor, TabCompleter {
             return;
         }
         if (args.length < 2) {
-            sender.sendMessage("§cUsage: /elytratrims apply <glow|cosmic|animation>");
+            sender.sendMessage("§cUsage: /elytratrims apply <" + String.join("|", effectNames()) + ">");
             return;
         }
 
         Settings.Effect effect = parseEffect(args[1]);
         if (effect == null) {
-            sender.sendMessage("§cUnknown effect: " + args[1] + ". Options: glow, cosmic, animation");
+            sender.sendMessage("§cUnknown effect: " + args[1] + ". Options: " + String.join(", ", effectNames()));
+            return;
+        }
+        if (!plugin.getSettings().isEffectEnabled(effect)) {
+            sender.sendMessage("§cThe " + effect.getConfigKey() + " effect is disabled in the config.");
             return;
         }
 
@@ -82,13 +96,13 @@ public class ElytraTrimsCommand implements CommandExecutor, TabCompleter {
             return;
         }
         if (args.length < 2) {
-            sender.sendMessage("§cUsage: /elytratrims remove <glow|cosmic|animation>");
+            sender.sendMessage("§cUsage: /elytratrims remove <" + String.join("|", effectNames()) + ">");
             return;
         }
 
         Settings.Effect effect = parseEffect(args[1]);
         if (effect == null) {
-            sender.sendMessage("§cUnknown effect: " + args[1] + ". Options: glow, cosmic, animation");
+            sender.sendMessage("§cUnknown effect: " + args[1] + ". Options: " + String.join(", ", effectNames()));
             return;
         }
 
@@ -135,7 +149,7 @@ public class ElytraTrimsCommand implements CommandExecutor, TabCompleter {
             return filter(SUBCOMMANDS, args[0]);
         }
         if (args.length == 2 && (args[0].equalsIgnoreCase("apply") || args[0].equalsIgnoreCase("remove"))) {
-            return filter(EFFECT_NAMES, args[1]);
+            return filter(effectNames(), args[1]);
         }
         return List.of();
     }
