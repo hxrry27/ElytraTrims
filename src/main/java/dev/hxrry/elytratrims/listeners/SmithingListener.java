@@ -84,7 +84,7 @@ public class SmithingListener implements Listener {
             if (template.getType() == Material.OMINOUS_TRIAL_KEY) return RecipeMatch.of(RecipeType.RANDOM_TRIM_REROLL);
         }
 
-        if (settings.isBannerPatternsEnabled() && Tag.BANNERS.isTagged(template.getType())) {
+        if (settings.isBannerPatternsEnabled() && Tag.ITEMS_BANNERS.isTagged(template.getType())) {
             if (addition.getType() == Material.PAPER) return RecipeMatch.of(RecipeType.BANNER_PATTERN);
             if (addition.getType() == Material.LEATHER) return RecipeMatch.of(RecipeType.SHIELD_PATTERN);
         }

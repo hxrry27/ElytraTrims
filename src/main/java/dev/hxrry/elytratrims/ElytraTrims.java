@@ -104,7 +104,7 @@ public final class ElytraTrims extends JavaPlugin {
         }
 
         if (settings.isBannerPatternsEnabled()) {
-            RecipeChoice bannerChoice = new RecipeChoice.MaterialChoice(Tag.BANNERS);
+            RecipeChoice bannerChoice = new RecipeChoice.MaterialChoice(Tag.ITEMS_BANNERS);
 
             NamespacedKey bannerKey = new NamespacedKey(this, "elytra_banner_pattern");
             getServer().addRecipe(new SmithingTransformRecipe(
