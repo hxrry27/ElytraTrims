@@ -1,6 +1,7 @@
 name: ElytraTrims
 version: '${version}'
 main: dev.hxrry.elytratrims.ElytraTrims
+bootstrapper: dev.hxrry.elytratrims.ElytraTrimsBootstrap
 api-version: '26.2'
 description: Server-side companion plugin for the Elytra Trims Fabric mod
 authors: [hxrry]
