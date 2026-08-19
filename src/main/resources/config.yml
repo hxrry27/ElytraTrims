@@ -1,5 +1,14 @@
 # ElytraTrims Configuration
 
+# Elytra trims and dyeing are the *vanilla* recipes, unlocked by putting the elytra into
+# #minecraft:trimmable_armor and a crafting_dye recipe
+
+# Only data driven stuff can do that (i think?), so the plugin hands the server a datapack 
+# out of its own jar. The same pack defines elytratrims:decoratable,
+# which the client mod needs for its smithing table wing preview and slot hints.
+
+# To turn it off, disable the pack itself: /datapack disable "file/elytratrims"
+
 # feature toggles - disable any feature entirely
 features:
   trims: true

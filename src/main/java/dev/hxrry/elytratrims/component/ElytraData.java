@@ -107,6 +107,7 @@ public final class ElytraData {
                 comps.getOrCreateCompound(CUSTOM_DATA).setByte(key, (byte) 1);
             } else if (comps.hasTag(CUSTOM_DATA)) {
                 comps.getOrCreateCompound(CUSTOM_DATA).removeKey(key);
+                dropEmptyCustomData(comps);
             }
         });
     }
@@ -131,7 +132,15 @@ public final class ElytraData {
             customData.removeKey(KEY_GATEWAY);
             customData.removeKey(KEY_ANIMATION);
             customData.removeKey(KEY_BANNER);
+            dropEmptyCustomData(comps);
         });
+    }
+
+    private static void dropEmptyCustomData(ReadWriteNBT comps) {
+        ReadWriteNBT customData = comps.getCompound(CUSTOM_DATA);
+        if (customData != null && customData.getKeys().isEmpty()) {
+            comps.removeKey(CUSTOM_DATA);
+        }
     }
 
     public static void setBannerFlag(ItemStack elytra, boolean value) {
@@ -140,6 +149,7 @@ public final class ElytraData {
                 comps.getOrCreateCompound(CUSTOM_DATA).setByte(KEY_BANNER, (byte) 1);
             } else if (comps.hasTag(CUSTOM_DATA)) {
                 comps.getOrCreateCompound(CUSTOM_DATA).removeKey(KEY_BANNER);
+                dropEmptyCustomData(comps);
             }
         });
     }

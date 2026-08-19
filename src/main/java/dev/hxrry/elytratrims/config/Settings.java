@@ -65,7 +65,7 @@ public class Settings {
             if (section != null) {
                 boolean enabled = section.getBoolean("enabled", true);
                 String permission = section.getString("permission", "elytratrims.effect." + effect.getConfigKey());
-                Material ingredient = parseMaterial(section.getString("ingredient"), effect.getDefaultIngredient());
+                Material ingredient = parseMaterial(plugin, effect, section.getString("ingredient"), effect.getDefaultIngredient());
                 effectConfigs.put(effect, new EffectConfig(enabled, permission, ingredient));
             } else {
                 effectConfigs.put(effect, new EffectConfig(true,
@@ -73,6 +73,8 @@ public class Settings {
                         effect.getDefaultIngredient()));
             }
         }
+
+        warnOnSharedIngredients(plugin);
 
         // messages
         noPermissionMessage = MM.deserialize(config.getString("messages.no-permission",
@@ -87,12 +89,43 @@ public class Settings {
                 "<green>ElytraTrims config reloaded."));
     }
 
-    private Material parseMaterial(String name, Material fallback) {
+    private Material parseMaterial(ElytraTrims plugin, Effect effect, String name, Material fallback) {
         if (name == null) return fallback;
+
+        Material material;
         try {
-            return Material.valueOf(name.toUpperCase());
+            material = Material.valueOf(name.toUpperCase());
         } catch (IllegalArgumentException e) {
+            plugin.getLogger().warning("Unknown ingredient '" + name + "' for effect '"
+                    + effect.getConfigKey() + "', falling back to " + fallback + ".");
             return fallback;
+        }
+
+        if (!material.isItem()) {
+            plugin.getLogger().warning("Ingredient '" + name + "' for effect '" + effect.getConfigKey()
+                    + "' is not an obtainable item, falling back to " + fallback + ".");
+            return fallback;
+        }
+
+        return material;
+    }
+
+    private void warnOnSharedIngredients(ElytraTrims plugin) {
+        for (Effect effect : Effect.values()) {
+            EffectConfig config = effectConfigs.get(effect);
+            if (config == null || !config.enabled()) continue;
+
+            for (Effect other : Effect.values()) {
+                if (other.ordinal() <= effect.ordinal()) continue;
+                EffectConfig otherConfig = effectConfigs.get(other);
+                if (otherConfig == null || !otherConfig.enabled()) continue;
+
+                if (config.ingredient() == otherConfig.ingredient()) {
+                    plugin.getLogger().warning("Effects '" + effect.getConfigKey() + "' and '"
+                            + other.getConfigKey() + "' share the ingredient " + config.ingredient()
+                            + "; only '" + effect.getConfigKey() + "' will be craftable.");
+                }
+            }
         }
     }
 
