@@ -30,9 +30,10 @@ import java.util.Random;
 public class SmithingListener implements Listener {
 
     private final ElytraTrims plugin;
-    private final Random random = new Random();
 
     private List<TrimPattern> trimPatterns;
+
+    private int seed = new Random().nextInt();
 
     public SmithingListener(ElytraTrims plugin) {
         this.plugin = plugin;
@@ -50,7 +51,6 @@ public class SmithingListener implements Listener {
     // ── Recipe Detection ──
 
     private enum RecipeType {
-        SPECIFIC_TRIM,
         RANDOM_TRIM,
         RANDOM_TRIM_REROLL,
         BANNER_PATTERN,
@@ -76,26 +76,17 @@ public class SmithingListener implements Listener {
             if (effect != null && settings.isEffectEnabled(effect)) {
                 return RecipeMatch.gated(effect);
             }
+            return RecipeMatch.none();
         }
 
-        if (template != null && template.getType() == Material.TRIAL_KEY && isTrimMaterial(addition)) {
-            if (settings.isTrimsEnabled()) return RecipeMatch.of(RecipeType.RANDOM_TRIM);
+        if (settings.isTrimsEnabled() && findTrimMaterial(addition) != null) {
+            if (template.getType() == Material.TRIAL_KEY) return RecipeMatch.of(RecipeType.RANDOM_TRIM);
+            if (template.getType() == Material.OMINOUS_TRIAL_KEY) return RecipeMatch.of(RecipeType.RANDOM_TRIM_REROLL);
         }
 
-        if (template != null && template.getType() == Material.OMINOUS_TRIAL_KEY && isTrimMaterial(addition)) {
-            if (settings.isTrimsEnabled()) return RecipeMatch.of(RecipeType.RANDOM_TRIM_REROLL);
-        }
-
-        if (template != null && isTrimTemplate(template.getType()) && isTrimMaterial(addition)) {
-            if (settings.isTrimsEnabled()) return RecipeMatch.of(RecipeType.SPECIFIC_TRIM);
-        }
-
-        if (template != null && isBanner(template.getType()) && addition.getType() == Material.PAPER) {
-            if (settings.isBannerPatternsEnabled()) return RecipeMatch.of(RecipeType.BANNER_PATTERN);
-        }
-
-        if (template != null && isBanner(template.getType()) && addition.getType() == Material.LEATHER) {
-            if (settings.isBannerPatternsEnabled()) return RecipeMatch.of(RecipeType.SHIELD_PATTERN);
+        if (settings.isBannerPatternsEnabled() && Tag.BANNERS.isTagged(template.getType())) {
+            if (addition.getType() == Material.PAPER) return RecipeMatch.of(RecipeType.BANNER_PATTERN);
+            if (addition.getType() == Material.LEATHER) return RecipeMatch.of(RecipeType.SHIELD_PATTERN);
         }
 
         return RecipeMatch.none();
@@ -112,61 +103,49 @@ public class SmithingListener implements Listener {
         ItemStack addition = inv.getInputMineral();
 
         RecipeMatch match = detectRecipe(template, base, addition);
-        if (match.type() == RecipeType.NONE) return;
+        if (match.type() == RecipeType.NONE) {
+            gateVanillaTrim(event, base);
+            return;
+        }
 
         Player player = getViewingPlayer(event.getViewers());
-        if (player == null) return;
-
-        if (!hasPermission(player, match)) {
+        if (player != null && !hasPermission(player, match)) {
             event.setResult(null);
             return;
         }
 
-        ItemStack result = buildResult(match, template, base, addition);
-        if (result != null) {
-            event.setResult(result);
+        // our recipes result in a bare elytra, so anything short of a real result has to be
+        // cleared — otherwise the player trades an enchanted elytra for a fresh one
+        event.setResult(buildResult(match, template, base, addition));
+    }
+
+    private void gateVanillaTrim(PrepareSmithingEvent event, ItemStack base) {
+        if (!ElytraData.isElytra(base)) return;
+
+        ItemStack result = event.getResult();
+        if (result == null || !result.hasData(DataComponentTypes.TRIM)) return;
+
+        if (!plugin.getSettings().isTrimsEnabled()) {
+            event.setResult(null);
+            return;
+        }
+
+        Player player = getViewingPlayer(event.getViewers());
+        if (player != null && !player.hasPermission("elytratrims.craft.trim")) {
+            event.setResult(null);
         }
     }
 
-    // ── InventoryClickEvent: Handle ingredient consumption ──
 
-    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onInventoryClick(InventoryClickEvent event) {
         if (!(event.getInventory() instanceof SmithingInventory inv)) return;
         if (event.getSlotType() != InventoryType.SlotType.RESULT) return;
-        if (!(event.getWhoClicked() instanceof Player player)) return;
 
         ItemStack result = inv.getResult();
         if (result == null || result.getType().isAir()) return;
 
-        ItemStack template = inv.getInputTemplate();
-        ItemStack base = inv.getInputEquipment();
-        ItemStack addition = inv.getInputMineral();
-
-        RecipeMatch match = detectRecipe(template, base, addition);
-        if (match.type() == RecipeType.NONE) return;
-
-        if (!hasPermission(player, match)) {
-            event.setCancelled(true);
-            player.sendMessage(plugin.getSettings().getNoPermissionMessage());
-            return;
-        }
-
-        plugin.getServer().getScheduler().runTask(plugin, () -> {
-            inv.setItem(1, null);
-
-            consumeOne(inv, 2);
-
-            if (match.type() == RecipeType.SPECIFIC_TRIM
-                    || match.type() == RecipeType.RANDOM_TRIM
-                    || match.type() == RecipeType.RANDOM_TRIM_REROLL
-                    || match.type() == RecipeType.BANNER_PATTERN
-                    || match.type() == RecipeType.SHIELD_PATTERN) {
-                consumeOne(inv, 0);
-            }
-
-            inv.setResult(null);
-        });
+        seed = new Random(seed).nextInt();
     }
 
     // ── Result Building ──
@@ -175,69 +154,58 @@ public class SmithingListener implements Listener {
         ItemStack result = base.clone();
         result.setAmount(1);
 
-        switch (match.type()) {
-            case SPECIFIC_TRIM -> applySpecificTrim(result, template, addition);
+        boolean applied = switch (match.type()) {
             case RANDOM_TRIM -> applyRandomTrim(result, addition, true);
             case RANDOM_TRIM_REROLL -> applyRandomTrim(result, addition, false);
             case BANNER_PATTERN -> applyBannerPatterns(result, template, true);
             case SHIELD_PATTERN -> applyBannerPatterns(result, template, false);
-            case GATED_EFFECT -> ElytraData.setEffect(result, match.effect(), true);
-            default -> { return null; }
-        }
+            case GATED_EFFECT -> {
+                ElytraData.setEffect(result, match.effect(), true);
+                yield true;
+            }
+            default -> false;
+        };
 
-        return result;
+        return applied ? result : null;
     }
 
-    private void applySpecificTrim(ItemStack elytra, ItemStack template, ItemStack addition) {
-        TrimMaterial material = findTrimMaterial(addition);
-        if (material == null) return;
-
-        TrimPattern pattern = findTrimPatternForTemplate(template.getType());
-        if (pattern == null) return;
-
-        ArmorTrim trim = new ArmorTrim(material, pattern);
-        ElytraData.setTrim(elytra, ItemArmorTrim.itemArmorTrim(trim).build());
-    }
-
-    private void applyRandomTrim(ItemStack elytra, ItemStack addition, boolean consistent) {
+    private boolean applyRandomTrim(ItemStack elytra, ItemStack addition, boolean consistent) {
         List<TrimPattern> patterns = getTrimPatterns();
-        if (patterns.isEmpty()) return;
+        if (patterns.isEmpty()) return false;
 
         TrimMaterial material = findTrimMaterial(addition);
-        if (material == null) return;
+        if (material == null) return false;
 
-        TrimPattern currentPattern = null;
+        ArmorTrim current = null;
         if (ElytraData.hasTrim(elytra)) {
             ItemArmorTrim existing = ElytraData.getTrim(elytra);
-            if (existing != null) {
-                currentPattern = existing.armorTrim().getPattern();
-            }
+            if (existing != null) current = existing.armorTrim();
         }
 
-        TrimPattern chosen;
-        if (patterns.size() == 1) {
-            chosen = patterns.getFirst();
-        } else {
-            int attempts = 0;
-            do {
-                chosen = patterns.get(random.nextInt(patterns.size()));
-                attempts++;
-            } while (chosen.equals(currentPattern) && attempts < 20);
+        // seeded for the trial key so every player gets the same pattern until the seed advances,
+        // fresh for the ominous key so it actually rerolls
+        Random rng = consistent ? new Random(seed) : new Random();
+
+        TrimPattern chosen = patterns.get(rng.nextInt(patterns.size()));
+        for (int attempt = 0; attempt < 9 && current != null; attempt++) {
+            if (!chosen.equals(current.getPattern()) || !material.equals(current.getMaterial())) break;
+            chosen = patterns.get(rng.nextInt(patterns.size()));
         }
 
-        ArmorTrim trim = new ArmorTrim(material, chosen);
-        ElytraData.setTrim(elytra, ItemArmorTrim.itemArmorTrim(trim).build());
+        ElytraData.setTrim(elytra, ItemArmorTrim.itemArmorTrim(new ArmorTrim(material, chosen)).build());
+        return true;
     }
 
-    private void applyBannerPatterns(ItemStack elytra, ItemStack banner, boolean bannerStyle) {
-        if (banner == null) return;
+    private boolean applyBannerPatterns(ItemStack elytra, ItemStack banner, boolean bannerStyle) {
+        if (banner == null) return false;
 
         BannerPatternLayers patterns = banner.getData(DataComponentTypes.BANNER_PATTERNS);
-        if (patterns != null) {
-            ElytraData.setBannerPatterns(elytra, patterns);
-            // banner (paper) -> entity/wings/banner textures; shield (leather) -> entity/wings/shield
-            ElytraData.setBannerFlag(elytra, bannerStyle);
-        }
+        if (patterns == null || patterns.patterns().isEmpty()) return false;
+
+        ElytraData.setBannerPatterns(elytra, patterns);
+        // banner (paper) -> entity/wings/banner textures; shield (leather) -> entity/wings/shield
+        ElytraData.setBannerFlag(elytra, bannerStyle);
+        return true;
     }
 
     // ── Permission Checking ──
@@ -246,7 +214,7 @@ public class SmithingListener implements Listener {
         Settings settings = plugin.getSettings();
 
         return switch (match.type()) {
-            case SPECIFIC_TRIM, RANDOM_TRIM, RANDOM_TRIM_REROLL -> player.hasPermission("elytratrims.craft.trim");
+            case RANDOM_TRIM, RANDOM_TRIM_REROLL -> player.hasPermission("elytratrims.craft.trim");
             case BANNER_PATTERN, SHIELD_PATTERN -> player.hasPermission("elytratrims.craft.pattern");
             case GATED_EFFECT -> {
                 Settings.EffectConfig config = settings.getEffectConfig(match.effect());
@@ -265,68 +233,8 @@ public class SmithingListener implements Listener {
         return null;
     }
 
-    private boolean isTrimMaterial(ItemStack item) {
-        return findTrimMaterial(item) != null;
-    }
-
-    @SuppressWarnings("deprecation")
     private TrimMaterial findTrimMaterial(ItemStack item) {
-        if (item == null) return null;
-        for (TrimMaterial material : Registry.TRIM_MATERIAL) {
-            if (matchesTrimMaterial(item.getType(), material)) {
-                return material;
-            }
-        }
-        return null;
-    }
-
-    private boolean matchesTrimMaterial(Material material, TrimMaterial trimMaterial) {
-        @SuppressWarnings("removal")
-        String key = trimMaterial.getKey().getKey();
-        return switch (key) {
-            case "iron" -> material == Material.IRON_INGOT;
-            case "copper" -> material == Material.COPPER_INGOT;
-            case "gold" -> material == Material.GOLD_INGOT;
-            case "lapis" -> material == Material.LAPIS_LAZULI;
-            case "emerald" -> material == Material.EMERALD;
-            case "diamond" -> material == Material.DIAMOND;
-            case "netherite" -> material == Material.NETHERITE_INGOT;
-            case "redstone" -> material == Material.REDSTONE;
-            case "amethyst" -> material == Material.AMETHYST_SHARD;
-            case "quartz" -> material == Material.QUARTZ;
-            case "resin" -> material == Material.RESIN_BRICK;
-            default -> false;
-        };
-    }
-
-    private boolean isBanner(Material material) {
-        return Tag.BANNERS.isTagged(material);
-    }
-
-    private boolean isTrimTemplate(Material material) {
-        return material.name().endsWith("_ARMOR_TRIM_SMITHING_TEMPLATE");
-    }
-
-    @SuppressWarnings({ "deprecation", "removal" })
-    private TrimPattern findTrimPatternForTemplate(Material template) {
-        String name = template.name(); // e.g. WAYFINDER_ARMOR_TRIM_SMITHING_TEMPLATE
-        String patternKey = name.replace("_ARMOR_TRIM_SMITHING_TEMPLATE", "").toLowerCase();
-        for (TrimPattern pattern : Registry.TRIM_PATTERN) {
-            if (pattern.getKey().getKey().equals(patternKey)) {
-                return pattern;
-            }
-        }
-        return null;
-    }
-
-    private void consumeOne(SmithingInventory inv, int slot) {
-        ItemStack item = inv.getItem(slot);
-        if (item == null || item.getType().isAir()) return;
-        if (item.getAmount() > 1) {
-            item.setAmount(item.getAmount() - 1);
-            inv.setItem(slot, item);
-        } else {
-            inv.setItem(slot, null);
-        }
+        if (item == null || item.getType().isAir()) return null;
+        return item.getData(DataComponentTypes.PROVIDES_TRIM_MATERIAL);
     }
 }
