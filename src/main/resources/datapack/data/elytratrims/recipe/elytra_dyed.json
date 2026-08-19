@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:crafting_dye",
+  "category": "misc",
+  "group": "dyed_armor",
+  "dye": "#minecraft:dyes",
+  "target": "#elytratrims:decoratable",
+  "result": { "id": "minecraft:elytra" }
+}

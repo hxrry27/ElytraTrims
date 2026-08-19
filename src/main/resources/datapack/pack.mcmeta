@@ -1,0 +1,7 @@
+{
+  "pack": {
+    "description": "ElytraTrims - elytra decoration data",
+    "pack_format": 100,
+    "supported_formats": { "min_inclusive": 48, "max_inclusive": 9999 }
+  }
+}
