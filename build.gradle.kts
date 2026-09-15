@@ -16,7 +16,7 @@ repositories {
 }
 
 dependencies {
-    compileOnly("io.papermc.paper:paper-api:26.2.build.+")
+    compileOnly("io.papermc.paper:paper-api:26.3-rc-3.build.+")
     compileOnly("de.tr7zw:item-nbt-api-plugin:2.15.7")
 }
 
