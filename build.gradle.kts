@@ -3,7 +3,7 @@ plugins {
 }
 
 group = "dev.hxrry"
-version = "1.1.1"
+version = "1.1.2"
 
 java {
     toolchain.languageVersion.set(JavaLanguageVersion.of(25))
